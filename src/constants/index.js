@@ -1,0 +1,1 @@
+export const STORAGE_KEY = 'chat_history_v1';
