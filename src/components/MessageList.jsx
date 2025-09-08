@@ -21,7 +21,7 @@ function PendingBubble({ dir }) {
 		return () => clearTimeout(t);
 	}, []);
 	return (
-		<div className="bubble" dir={dir}><span className="loading-dot">{showSearching ? 'Thinking... Searching through the sources' : 'Thinking...'}</span></div>
+		<div className="bubble" dir={dir}><span className="loading-dot">{showSearching ? 'Searching through the sources' : 'Thinking...'}</span></div>
 	);
 }
 

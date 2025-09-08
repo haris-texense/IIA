@@ -2,7 +2,7 @@ async function makeApiCall(url, message, systemInstruction, tools = []) {
 	const response = await fetch(url, {
 		method: "POST",
 		headers: {
-			"Authorization": "Bearer ya29.a0AS3H6Nzy_zLDBBRQi69b3rei319AJwkh3oD0dS3N2MtdcfASu-TdhY0q0y31-V-ApLOODWHjKk9cuKQOM3deccNTTcIXvFAkwXt34imfVGTyJUJXg1UddXTXDoP9SMJ7JB3gMqUbFKURnR_CP0vMQXancuyLbK3we47yB_IwFmNxShwWo5hb-TLkOQUImH6nSVS2nEZb5T6dzF-VrP5i9FXNOCcvnH0LDI56OFKNScxL3wkdtgVTBYcu8K21Ny1G2KTKgAzQKUlAMMi_bbA8uLxg1nCSMUJzt-72e1JEaq9bWSKM_75JbHn_ojAiktqvN1JYvfCM9SZhgRsc2L1G0TTxOGtHli_Tc26q0AaCgYKAQ4SARQSFQHGX2MiYE4See9YSqA1W9bjblMK6Q0365", 
+			"Authorization": "Bearer ", 
 			"Content-Type": "application/json"
 		},
 		body: JSON.stringify({
