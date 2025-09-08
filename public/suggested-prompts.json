@@ -37,6 +37,17 @@
 	  ]
 	},
 	{
+	  "use_case": "Charts and Graphs",
+	  "example_intents": [
+		"Risk-based audit planning",
+		"Interpretation of a standard clause"
+	  ],
+	  "prompts": [
+		"What are global risk levels?",
+		"What percentage of respondents either agreed or strongly agreed with the requirements, and how does this total compare to the percentage that disagreed or strongly disagreed?"
+	  ]
+	},
+	{
 	  "use_case": "Events and Conferences",
 	  "example_intents": [
 		"Conference Agenda",

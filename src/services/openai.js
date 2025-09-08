@@ -126,7 +126,7 @@ export async function fetchGraphReply(conversation) {
 
     const graphSystemInstruction = "Give only HTML format of suitable graph for the above data. Do not include any irrelevant info other than graph. If not found, output should be \"No Graph data found.\" ";
 
-    const primaryUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-pro:generateContent";
+    const primaryUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent";
 
     return await makeApiCall(primaryUrl, lastMessage, graphSystemInstruction, []);
 }
