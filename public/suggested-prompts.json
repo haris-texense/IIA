@@ -1,8 +1,51 @@
 [
-	"What AI capabilities are available in this assistant?",
-	"Summarize this text: ",
-	"Write a professional email to schedule a meeting.",
-	"Explain this concept in simple terms: ",
-	"Generate test cases for a login form."
-]
-
+	{
+	  "use_case": "Certification / Exams",
+	  "example_intents": [
+		"Register for the CIA",
+		"Exam schedules",
+		"Eligibility and Fees"
+	  ],
+	  "prompts": [
+		"Guide me through the CIA exam registration process.",
+		"Can you explain the eligibility criteria?",
+		"Can you explain the fee structure?"
+	  ]
+	},
+	{
+	  "use_case": "Membership",
+	  "example_intents": [
+		"Renew membership",
+		"Membership Process"
+	  ],
+	  "prompts": [
+		"How do I renew my membership online?",
+		"Explain the steps to become a member.",
+		"What are the benefits of maintaining an active membership?"
+	  ]
+	},
+	{
+	  "use_case": "Standards and Guidelines",
+	  "example_intents": [
+		"Risk-based audit planning",
+		"Interpretation of a standard clause"
+	  ],
+	  "prompts": [
+		"Provide guidance on implementing risk-based audit planning.",
+		"What are global internal audit standards to ensure independence and objectivity, and how are impairments disclosed?",
+		"How do the standards apply to internal audit practices?"
+	  ]
+	},
+	{
+	  "use_case": "Events and Conferences",
+	  "example_intents": [
+		"Conference Agenda",
+		"Recent Conferences"
+	  ],
+	  "prompts": [
+		"Share the agenda for the upcoming conference.",
+		"What were the highlights of the most recent conference?",
+		"List upcoming events relevant to internal auditors."
+	  ]
+	}
+  ]  
