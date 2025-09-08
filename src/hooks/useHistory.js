@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { readConversations, writeConversations } from '../services/storage.js';
+import { readConversations, writeConversations, deleteConversation as storageDelete } from '../services/storage.js';
 
 export function useHistory() {
 	const [conversations, setConversations] = useState([]);
@@ -17,10 +17,13 @@ export function useHistory() {
 	}
 
 	function upsertCurrent(messages) {
+		if (!messages || messages.length === 0) return;
+		
 		const now = Date.now();
 		setConversations(prev => {
 			let next = Array.isArray(prev) ? [...prev] : [];
 			let activeId = currentIdRef.current || currentConversationId;
+			
 			if (!activeId) {
 				activeId = crypto.randomUUID();
 				currentIdRef.current = activeId;
@@ -30,12 +33,22 @@ export function useHistory() {
 					...next,
 				];
 			} else {
-				next = next.map(c =>
-					c.id === activeId
-						? { ...c, title: deriveTitle(messages), messages: [...messages], updatedAt: now }
-						: c,
-				);
+				const existingIndex = next.findIndex(c => c.id === activeId);
+				if (existingIndex >= 0) {
+					next[existingIndex] = { 
+						...next[existingIndex], 
+						title: deriveTitle(messages), 
+						messages: [...messages], 
+						updatedAt: now 
+					};
+				} else {
+					next = [
+						{ id: activeId, title: deriveTitle(messages), messages: [...messages], createdAt: now, updatedAt: now },
+						...next,
+					];
+				}
 			}
+			
 			writeConversations(next);
 			return next;
 		});
@@ -53,7 +66,20 @@ export function useHistory() {
 		return Array.isArray(conv.messages) ? conv.messages : [];
 	}
 
-	return { conversations, currentConversationId, upsertCurrent, newChat, loadConversation };
+	function removeConversation(id) {
+		setConversations(prev => {
+			const next = prev.filter(c => c.id !== id);
+			writeConversations(next);
+			storageDelete(id);
+			if (currentIdRef.current === id) {
+				currentIdRef.current = null;
+				setCurrentConversationId(null);
+			}
+			return next;
+		});
+	}
+
+	return { conversations, currentConversationId, upsertCurrent, newChat, loadConversation, removeConversation };
 }
 
 

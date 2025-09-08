@@ -16,4 +16,15 @@ export function writeConversations(conversations) {
 	} catch {}
 }
 
+export function deleteConversation(id) {
+	try {
+		const list = readConversations();
+		const next = list.filter(c => c.id !== id);
+		writeConversations(next);
+		return next;
+	} catch {
+		return readConversations();
+	}
+}
+
 

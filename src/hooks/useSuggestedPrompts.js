@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export function useSuggestedPrompts() {
-	const [suggestedPrompts, setSuggestedPrompts] = useState([]);
+	const [useCases, setUseCases] = useState([]);
 
 	useEffect(() => {
 		(async () => {
@@ -9,14 +9,23 @@ export function useSuggestedPrompts() {
 				const res = await fetch('/suggested-prompts.json');
 				if (!res.ok) throw new Error('Failed to load suggestions');
 				const data = await res.json();
-				if (Array.isArray(data)) setSuggestedPrompts(data.slice(0, 5));
+				if (Array.isArray(data)) {
+					const normalized = data
+						.filter(item => item && typeof item.use_case === 'string' && Array.isArray(item.example_intents))
+						.map(item => ({ 
+							useCase: item.use_case, 
+							intents: item.example_intents.filter(x => typeof x === 'string'),
+							prompts: Array.isArray(item.prompts) ? item.prompts.filter(x => typeof x === 'string') : []
+						}));
+					setUseCases(normalized);
+				}
 			} catch {
-				setSuggestedPrompts([]);
+				setUseCases([]);
 			}
 		})();
 	}, []);
 
-	return suggestedPrompts;
+	return useCases;
 }
 
 
