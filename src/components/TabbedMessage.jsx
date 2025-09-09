@@ -155,7 +155,24 @@ function IframeHtml({ html }) {
 	const ref = useRef(null);
 	const docHtml = `<!doctype html><html><head><meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<style>html,body{margin:0;padding:8px;background:#fff;color:#0f172a;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}#root{width:100%}</style>
+		<style>
+			html, body {
+				margin: 0;
+				padding: 16px;
+				background: #fff;
+				color: #0f172a;
+				font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+				width: 100%;
+				height: 100%;
+				box-sizing: border-box;
+			}
+			/* Make charts expand to iframe width */
+			canvas, svg {
+				display: block;
+				width: 100% !important;
+				height: 600px !important;
+			}
+		</style>
 	</head><body>${html}</body></html>`;
 
 	useEffect(() => {
@@ -168,9 +185,9 @@ function IframeHtml({ html }) {
 				const h = Math.max(
 					doc.body?.scrollHeight || 0,
 					doc.documentElement?.scrollHeight || 0,
-					200
+					800
 				);
-				iframe.style.height = Math.min(h, 1600) + 'px';
+				iframe.style.height = h + 'px';
 			} catch {}
 		}
 		const t = setInterval(resize, 350);
@@ -182,7 +199,14 @@ function IframeHtml({ html }) {
 		<iframe
 			ref={ref}
 			title="graph"
-			style={{ width: '100%', border: '0', borderRadius: '8px', background: '#ffffff', minHeight: '220px' }}
+			style={{
+				width: '100%', 
+				minWidth: '1000px',   // force wider charts        // ✅ fit inside bubble
+				border: '0',
+				borderRadius: '8px',
+				background: '#ffffff',
+				minHeight: '800px'
+			}}
 			sandbox="allow-scripts allow-same-origin"
 			srcDoc={docHtml}
 		/>
