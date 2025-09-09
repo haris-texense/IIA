@@ -102,7 +102,7 @@ export async function fetchBotReply(conversation) {
 export async function fetchFallbackReply(conversation) {
 	const lastMessage = conversation[conversation.length - 1]?.content || "";
 
-	const fallbackSystemInstruction = "For all context, only use and search these sites: https://www.iia.org.sa/en , https://www.theiia.org/en , https://www.sama.gov.sa/en-US/Pages/default.aspx , https://nca.gov.sa/en/ . Rules: 1. Provide comprehensive answers strictly based on the information from the allowed sites above. 2. Return the response strictly in plain HTML format only. No Markdown, no plain text, no additional formatting. 3. If no relevant data is found, return exactly: `<p>No data found</p>` 5. Do not include any content or context from outside the specified websites.";
+	const fallbackSystemInstruction = "Act as an Internal Auditor in Saudia Arabia, for all context, only use and search these sites: https://www.iia.org.sa/en , https://www.theiia.org/en , https://nca.gov.sa/en/ . Rules: 1. Provide comprehensive answers strictly based on the information from the allowed sites above. 2. Return the response strictly in plain HTML format only. No Markdown, no plain text, no additional formatting. 3. If no relevant data is found, return exactly: `<p>No data found</p>` 5. Do not include any content or context from outside the specified websites.";
 
 	const fallbackUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent";
 
