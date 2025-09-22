@@ -13,9 +13,10 @@ import './styles/chat.css';
 export default function Chatbot() {
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [contextPrefix, setContextPrefix] = useState('');
+	const [searchMode, setSearchMode] = useState('kb');
 	const useCases = useSuggestedPrompts();
 	const { conversations, currentConversationId, upsertCurrent, newChat, loadConversation, removeConversation } = useHistory();
-	const { messages, setMessages, input, setInput, isLoading, canSend, canCreateGraph, handleSend, handleSendPrompt, handleCreateGraph, resetChat, endRef } = useChat(upsertCurrent, contextPrefix);
+	const { messages, setMessages, input, setInput, isLoading, canSend, canCreateGraph, handleSend, handleSendPrompt, handleCreateGraph, resetChat, endRef } = useChat(upsertCurrent, contextPrefix, searchMode);
 	const [suggested, setSuggested] = useState([]);
 
 	// Use the latest completed assistant reply to drive suggestions
@@ -83,7 +84,7 @@ export default function Chatbot() {
 	return (
 		<div className="chat-root gradient-bg" style={{ height: '100vh' }}>
 			<div className="chat-card" role="region" aria-label="Chatbot">
-				<Header isHistoryOpen={isHistoryOpen} onToggleHistory={() => setIsHistoryOpen(o => !o)} isLoading={isLoading} />
+				<Header isHistoryOpen={isHistoryOpen} onToggleHistory={() => setIsHistoryOpen(o => !o)} isLoading={isLoading} onHome={handleNewChat} />
 
 				<div className="shell">
 					{isHistoryOpen && (
@@ -105,9 +106,9 @@ export default function Chatbot() {
 								onSendPrompt={handleSendPrompt}
 							/>
 						) : (
-							<MessageList messages={messages} endRef={endRef} isChartsUseCase={String(contextPrefix).toLowerCase().includes('chart')} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} />
+					<MessageList messages={messages} endRef={endRef} isChartsUseCase={String(contextPrefix).toLowerCase().includes('chart')} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} />
 						)}
-						<ChatInput input={input} setInput={setInput} isLoading={isLoading} canSend={canSend} onSubmit={handleSend} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} suggestions={suggested} centered />
+					<ChatInput input={input} setInput={setInput} isLoading={isLoading} canSend={canSend} onSubmit={handleSend} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} suggestions={suggested} centered searchMode={searchMode} setSearchMode={setSearchMode} />
 					</main>
 				</div>
 			</div>

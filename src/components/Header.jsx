@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext.jsx';
 
-export default function Header({ isHistoryOpen, onToggleHistory, isLoading }) {
+export default function Header({ isHistoryOpen, onToggleHistory, isLoading, onHome }) {
 	const { lang, toggle, t } = useLanguage();
 	return (
 		<div className="chat-header">
@@ -24,7 +24,7 @@ export default function Header({ isHistoryOpen, onToggleHistory, isLoading }) {
 					className="button secondary small"
 					type="button"
 					onClick={() => {
-						try { window.dispatchEvent(new CustomEvent('landing-back')); } catch {}
+						try { if (onHome) { onHome(); } else { window.dispatchEvent(new CustomEvent('landing-back')); } } catch {}
 					}}
 					title={t('home')}
 					aria-label={t('home')}
