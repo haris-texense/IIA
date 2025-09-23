@@ -21,11 +21,11 @@ function PendingBubble({ dir }) {
 		return () => clearTimeout(t);
 	}, []);
 	return (
-		<div className="bubble" dir={dir}><span className="loading-dot">{showSearching ? 'Searching through the sources' : 'Thinking...'}</span></div>
+		<div className="bubble" dir={dir}><span className="loading-dot">{showSearching ? 'Searching through the documents and websites' : 'Thinking...'}</span></div>
 	);
 }
 
-export default function MessageList({ messages, endRef }) {
+export default function MessageList({ messages, endRef, isChartsUseCase = false, onCreateGraph, canCreateGraph }) {
 	return (
 		<div className="chat-messages">
 			{messages.map(m => {
@@ -52,7 +52,14 @@ export default function MessageList({ messages, endRef }) {
 							{m.pending ? (
 								<PendingBubble dir={assistantRtl ? 'rtl' : 'ltr'} />
 							) : isAssistant ? (
-								<TabbedMessage message={m} dir={assistantRtl ? 'rtl' : 'ltr'} />
+								<>
+									<TabbedMessage message={m} dir={assistantRtl ? 'rtl' : 'ltr'} />
+									{isChartsUseCase && canCreateGraph && (
+										<div style={{ paddingTop: '6px' }}>
+											<button className="button secondary" type="button" onClick={onCreateGraph}>Create graph</button>
+										</div>
+									)}
+								</>
 							) : (
 								<div className="bubble" dir={userRtl ? 'rtl' : 'ltr'}>{escapeHtml(m.content)}</div>
 							)}

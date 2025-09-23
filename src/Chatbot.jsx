@@ -13,27 +13,47 @@ import './styles/chat.css';
 export default function Chatbot() {
 	const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 	const [contextPrefix, setContextPrefix] = useState('');
+	const [searchMode, setSearchMode] = useState('kb');
 	const useCases = useSuggestedPrompts();
 	const { conversations, currentConversationId, upsertCurrent, newChat, loadConversation, removeConversation } = useHistory();
-	const { messages, setMessages, input, setInput, isLoading, canSend, canCreateGraph, handleSend, handleSendPrompt, handleCreateGraph, resetChat, endRef } = useChat(upsertCurrent, contextPrefix);
+	const { messages, setMessages, input, setInput, isLoading, canSend, canCreateGraph, handleSend, handleSendPrompt, handleCreateGraph, resetChat, endRef } = useChat(upsertCurrent, contextPrefix, searchMode);
 	const [suggested, setSuggested] = useState([]);
 
-	const lastUserText = useMemo(() => {
+	// Use the latest completed assistant reply to drive suggestions
+	const { lastAssistantText, hasValidContext } = useMemo(() => {
+		const result = { lastAssistantText: '', hasValidContext: false };
 		for (let i = messages.length - 1; i >= 0; i--) {
-			if (messages[i]?.role === 'user') return messages[i]?.content || '';
+			const m = messages[i];
+			if (m?.role === 'assistant' && !m?.pending) {
+				const text = (m.documentResponse || m.content || '').trim();
+				const lower = text.toLowerCase();
+				const containsNoDataEn = lower.includes('no data found');
+				const containsNoDataAr = text.includes('لم يتم العثور على بيانات');
+				result.lastAssistantText = text;
+				result.hasValidContext = Boolean(text) && !containsNoDataEn && !containsNoDataAr;
+				break;
+			}
 		}
-		return '';
+		return result;
 	}, [messages]);
 
 	useEffect(() => {
 		let aborted = false;
 		(async () => {
-			if (!lastUserText || lastUserText.trim().length === 0) { setSuggested([]); return; }
-			const prompts = await fetchSuggestedPrompts(lastUserText.trim());
+			if (!hasValidContext) { setSuggested([]); return; }
+			// strip HTML tags to keep only visible text context
+			const plain = String(lastAssistantText)
+				.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+				.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+				.replace(/<[^>]+>/g, ' ')
+				.replace(/\s+/g, ' ')
+				.trim();
+			if (!plain) { setSuggested([]); return; }
+			const prompts = await fetchSuggestedPrompts(plain);
 			if (!aborted) setSuggested(prompts || []);
 		})();
 		return () => { aborted = true; };
-	}, [lastUserText]);
+	}, [lastAssistantText, hasValidContext]);
 
 	function handleNewChat() {
 		// Save current conversation before starting new one
@@ -64,7 +84,7 @@ export default function Chatbot() {
 	return (
 		<div className="chat-root gradient-bg" style={{ height: '100vh' }}>
 			<div className="chat-card" role="region" aria-label="Chatbot">
-				<Header isHistoryOpen={isHistoryOpen} onToggleHistory={() => setIsHistoryOpen(o => !o)} isLoading={isLoading} />
+				<Header isHistoryOpen={isHistoryOpen} onToggleHistory={() => setIsHistoryOpen(o => !o)} isLoading={isLoading} onHome={handleNewChat} />
 
 				<div className="shell">
 					{isHistoryOpen && (
@@ -86,9 +106,9 @@ export default function Chatbot() {
 								onSendPrompt={handleSendPrompt}
 							/>
 						) : (
-							<MessageList messages={messages} endRef={endRef} />
+					<MessageList messages={messages} endRef={endRef} isChartsUseCase={String(contextPrefix).toLowerCase().includes('chart')} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} />
 						)}
-						<ChatInput input={input} setInput={setInput} isLoading={isLoading} canSend={canSend} onSubmit={handleSend} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} suggestions={suggested} />
+					<ChatInput input={input} setInput={setInput} isLoading={isLoading} canSend={canSend} onSubmit={handleSend} onCreateGraph={handleCreateGraph} canCreateGraph={canCreateGraph} suggestions={suggested} centered searchMode={searchMode} setSearchMode={setSearchMode} />
 					</main>
 				</div>
 			</div>

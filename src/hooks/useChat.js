@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchBotReply, fetchFallbackReply, fetchGraphReply } from '../services/openai.js';
 
-export function useChat(onAfterUpdate, contextPrefix = '') {
+export function useChat(onAfterUpdate, contextPrefix = '', searchMode = 'kb') {
 	const [messages, setMessages] = useState([]);
 	const [input, setInput] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
@@ -10,6 +10,7 @@ export function useChat(onAfterUpdate, contextPrefix = '') {
 	const containerRef = useRef(null);
 	const afterUpdateRef = useRef(onAfterUpdate);
 	const contextPrefixRef = useRef(contextPrefix);
+	const searchModeRef = useRef(searchMode || 'kb');
 
 	// Keep latest callback without re-subscribing effect
 	useEffect(() => {
@@ -19,6 +20,10 @@ export function useChat(onAfterUpdate, contextPrefix = '') {
 	useEffect(() => {
 		contextPrefixRef.current = contextPrefix || '';
 	}, [contextPrefix]);
+
+	useEffect(() => {
+		searchModeRef.current = searchMode || 'kb';
+	}, [searchMode]);
 
 	useEffect(() => {
 		if (endRef.current) {
@@ -65,32 +70,47 @@ export function useChat(onAfterUpdate, contextPrefix = '') {
 			const apiUserMsg = { id: crypto.randomUUID(), role: 'user', content: enrichedText };
 			const conversationForApi = [...prevMessages, apiUserMsg];
 
-			// Make both API calls in parallel
-			const [primaryReply, fallbackReply] = await Promise.all([
-				fetchBotReply(conversationForApi),
-				fetchFallbackReply(conversationForApi)
-			]);
-
-			// Normalize responses to expected shapes
-			const primaryText = primaryReply?.text ?? (typeof primaryReply === 'string' ? primaryReply : '');
-			const primaryRefs = Array.isArray(primaryReply?.references) ? primaryReply.references : [];
-			const fallbackText = fallbackReply?.text ?? (typeof fallbackReply === 'string' ? fallbackReply : '');
-			const fallbackRefs = Array.isArray(fallbackReply?.references) ? fallbackReply.references : [];
-
-			// Update the message with both responses
-			setMessages(prev => prev.map(m => 
-				m.id === botPlaceholder.id 
-					? { 
-						...m, 
-						content: primaryText || '...', 
-						documentResponse: primaryText || '',
-						websiteResponse: fallbackText || '',
-						documentReferences: primaryRefs,
-						websiteReferences: fallbackRefs,
-						pending: false 
-					} 
-					: m
-			));
+			const mode = (searchModeRef.current || 'kb').toLowerCase();
+			if (mode === 'web') {
+				const webReply = await fetchFallbackReply(conversationForApi);
+				const webText = webReply?.text ?? (typeof webReply === 'string' ? webReply : '');
+				const webRefs = Array.isArray(webReply?.references) ? webReply.references : [];
+				const webSupports = Array.isArray(webReply?.supports) ? webReply.supports : [];
+				setMessages(prev => prev.map(m => 
+					m.id === botPlaceholder.id 
+						? { 
+							...m, 
+							content: webText || '...', 
+							documentResponse: '',
+							websiteResponse: webText || '',
+							documentReferences: [],
+							websiteReferences: webRefs,
+							websiteSupports: webSupports,
+							pending: false 
+						} 
+						: m
+				));
+			} else {
+				// default to knowledgebase only
+				const kbReply = await fetchBotReply(conversationForApi);
+				const kbText = kbReply?.text ?? (typeof kbReply === 'string' ? kbReply : '');
+				const kbRefs = Array.isArray(kbReply?.references) ? kbReply.references : [];
+				const kbSupports = Array.isArray(kbReply?.supports) ? kbReply.supports : [];
+				setMessages(prev => prev.map(m => 
+					m.id === botPlaceholder.id 
+						? { 
+							...m, 
+							content: kbText || '...', 
+							documentResponse: kbText || '',
+							websiteResponse: '',
+							documentReferences: kbRefs,
+							websiteReferences: [],
+							documentSupports: kbSupports,
+							pending: false 
+						} 
+						: m
+				));
+			}
 		} catch (error) {
 			console.error("API calls failed:", error);
 			setMessages(prev => prev.map(m => 

@@ -121,8 +121,8 @@
 
 /* Tabbed Message Styles */
 .tabbed-message {
-	padding: 0;
-	overflow: hidden;
+    padding: 0;
+    overflow: visible; /* allow tooltips to overflow bubbles */
 }
 
 .tab-header {
@@ -183,6 +183,56 @@
 .tab-panel ul, .tab-panel ol { margin: 8px 0 8px 20px; padding: 0; }
 .tab-panel li { margin: 4px 0; }
 .tab-panel a { color: #1e40af; text-decoration: underline; }
+
+/* Citation tooltip styling */
+.citation-wrap { position: relative; }
+.citation { cursor: help; color: #1e40af; }
+.citation-badge {
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: super;
+  margin-left: 4px;
+}
+.citation-tooltip {
+  position: fixed; /* viewport-relative so it won't hide under the input */
+  left: 0; /* will be overridden inline */
+  top: 0;  /* will be overridden inline */
+  z-index: 9999;
+  width: auto;
+  max-width: min(90vw, 960px);
+  min-width: clamp(260px, 40vw, 600px);
+  max-height: 80vh; /* allow taller, JS will clamp further */
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 26px rgba(2,6,23,0.35);
+  font-size: 12px; /* one size smaller */
+  line-height: 1.5;
+  display: none !important;
+  pointer-events: auto;
+}
+.citation-tooltip a { color: #1e40af; }
+.citation-wrap:hover .citation-tooltip { display: block !important; }
+.citation-wrap.align-right .citation-tooltip { right: auto; left: auto; transform: none; }
+.citation-wrap { position: relative; display: inline-block; }
 
 /* RTL refinements for assistant messages: keep layout, flip text direction only */
 .bot[dir="rtl"] .bubble { direction: rtl; text-align: right; }

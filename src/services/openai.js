@@ -42,34 +42,67 @@ async function makeApiCall(url, message, systemInstruction, tools = []) {
 	// Extract text content
 	const text = data?.candidates?.[0]?.content?.parts?.map(p => p?.text || "").join("") || "";
 
-	// Extract reference links from grounding metadata
-	const groundingChunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-	const referencesRaw = groundingChunks
-		.map(chunk => {
-			const ctx = chunk?.retrievedContext;
-			const uri = ctx?.uri || ctx?.url || null;
-			const title = ctx?.title || ctx?.documentTitle || null;
-			if (!uri) return null;
-			return { uri, title: title || uri };
-		})
-		.filter(Boolean);
+    // Extract reference links from grounding metadata
+    const groundingChunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const referencesRaw = groundingChunks
+        .map(chunk => {
+            const ctx = chunk?.retrievedContext;
+            const uri = ctx?.uri || ctx?.url || null;
+            const title = ctx?.title || ctx?.documentTitle || null;
+            if (!uri) return null;
+            return { uri, title: title || uri };
+        })
+        .filter(Boolean);
 
-	// Deduplicate by URI
-	const seen = new Set();
-	const references = [];
-	for (const ref of referencesRaw) {
-		const key = String(ref.uri).trim();
-		if (key && !seen.has(key)) {
-			seen.add(key);
-			references.push(ref);
+    // Deduplicate by URI
+    const seen = new Set();
+    const references = [];
+    for (const ref of referencesRaw) {
+        const key = String(ref.uri).trim();
+        if (key && !seen.has(key)) {
+            seen.add(key);
+            references.push(ref);
+        }
+    }
+
+	// Map support segments to reference numbers using groundingSupports
+	const uriToRefIndex = new Map();
+	references.forEach((r, i) => {
+		const u = String(r?.uri || '').trim();
+		if (u && !uriToRefIndex.has(u)) uriToRefIndex.set(u, i + 1);
+	});
+	const rawSupports = Array.isArray(data?.candidates?.[0]?.groundingMetadata?.groundingSupports)
+		? data.candidates[0].groundingMetadata.groundingSupports
+		: [];
+	const supports = rawSupports.map(s => {
+		const seg = s?.segment || {};
+		const startIndex = Number.isFinite(seg?.startIndex) ? seg.startIndex : (Number.isFinite(seg?.endIndex) ? null : null);
+		const endIndex = Number.isFinite(seg?.endIndex) ? seg.endIndex : null;
+		const segmentText = String(seg?.text || '').trim();
+		// Map chunk indices to URIs
+		const chunkIdxs = Array.isArray(s?.groundingChunkIndices) ? s.groundingChunkIndices : [];
+		const uris = chunkIdxs
+			.map(ci => groundingChunks?.[ci]?.retrievedContext?.uri || groundingChunks?.[ci]?.retrievedContext?.url || null)
+			.filter(Boolean);
+		const primaryUri = uris.find(u => uriToRefIndex.has(String(u).trim())) || uris[0] || null;
+		const refNumber = primaryUri ? uriToRefIndex.get(String(primaryUri).trim()) || null : null;
+		// Prefer rich chunk text (ragChunk.text), fallback to retrievedContext.text
+		let snippet = '';
+		let pageSpan = null;
+		if (Number.isFinite(chunkIdxs?.[0])) {
+			const chunk = groundingChunks?.[chunkIdxs[0]];
+			const ctx = chunk?.retrievedContext || {};
+			snippet = String(ctx?.ragChunk?.text || ctx?.text || '').trim();
+			pageSpan = ctx?.pageSpan || null;
 		}
-	}
+		return { startIndex, endIndex, text: segmentText, uris, refNumber, snippet, pageSpan };
+	}).filter(s => s && s.text);
 
 	if (!text.trim()) {
 		throw new Error("Empty response from generateContent");
 	}
 
-	return { text: text.trim(), references };
+	return { text: text.trim(), references, supports };
 }
 
 // Primary API call (with retrieval tool)
@@ -102,7 +135,7 @@ export async function fetchBotReply(conversation) {
 export async function fetchFallbackReply(conversation) {
 	const lastMessage = conversation[conversation.length - 1]?.content || "";
 
-	const fallbackSystemInstruction = "For all context, only use and search these sites: https://www.iia.org.sa/en , https://www.theiia.org/en , https://www.sama.gov.sa/en-US/Pages/default.aspx , https://nca.gov.sa/en/ . Rules: 1. Provide comprehensive answers strictly based on the information from the allowed sites above. 2. Return the response strictly in plain HTML format only. No Markdown, no plain text, no additional formatting. 3. If no relevant data is found, return exactly: `<p>No data found</p>` 5. Do not include any content or context from outside the specified websites.";
+	const fallbackSystemInstruction = "Act as an Internal Auditor in Saudia Arabia, for all context, only use and search these sites: https://www.iia.org.sa/en , https://www.theiia.org/en , https://nca.gov.sa/en/ . Rules: 1. Provide comprehensive answers strictly based on the information from the allowed sites above. 2. Return the response strictly in plain HTML format only. No Markdown, no plain text, no additional formatting. 3. If no relevant data is found, return exactly: `<p>No data found</p>` 5. Do not include any content or context from outside the specified websites.";
 
 	const fallbackUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent";
 
@@ -126,7 +159,7 @@ export async function fetchGraphReply(conversation) {
 
     const graphSystemInstruction = "Give only HTML format of suitable graph for the above data. Do not include any irrelevant info other than graph. If not found, output should be \"No Graph data found.\" ";
 
-    const primaryUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-pro:generateContent";
+    const primaryUrl = "https://aiplatform.googleapis.com/v1/projects/new-cb-470108/locations/global/publishers/google/models/gemini-2.5-flash-lite:generateContent";
 
     return await makeApiCall(primaryUrl, lastMessage, graphSystemInstruction, []);
 }
