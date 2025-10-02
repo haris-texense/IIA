@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function TabbedMessage({ message, dir }) {
-	const [activeTab, setActiveTab] = useState('document');
 	const contentRef = useRef(null);
 
 	// Position citation tooltips within viewport
@@ -94,7 +93,7 @@ export default function TabbedMessage({ message, dir }) {
 			});
 			window.removeEventListener('resize', onResize);
 		};
-	}, [activeTab]);
+	}, []);
 
 	// Check if this is a new message format with both responses
 	const hasNewFormat = message.documentResponse !== undefined && message.websiteResponse !== undefined;
@@ -106,152 +105,125 @@ export default function TabbedMessage({ message, dir }) {
 		);
 	}
 
-	// Determine which responses are present and valid
+	// Get responses from both sources
 	const docRaw = (message.documentResponse || '').trim();
 	const webRaw = (message.websiteResponse || '').trim();
-	const hasDocumentResponse = docRaw.length > 0;
-	const hasWebsiteResponse = webRaw.length > 0;
 
 	// Treat both English and Arabic no-data markers as no data
 	const containsEnNoData = (s) => typeof s === 'string' && s.toLowerCase().includes('no data found');
 	const containsArNoData = (s) => typeof s === 'string' && s.includes('لم يتم العثور على بيانات');
 	const isNoData = (s) => containsEnNoData(s) || containsArNoData(s);
 
-	const docIsNoData = hasDocumentResponse && isNoData(docRaw);
-	const webIsNoData = hasWebsiteResponse && isNoData(webRaw);
-	const docIsValid = hasDocumentResponse && !docIsNoData;
-	const webIsValid = hasWebsiteResponse && !webIsNoData;
-	
-	// Set default tab:
-	useEffect(() => {
-		if (docIsValid && !webIsValid) {
-			setActiveTab('document');
-			return;
-		}
-		if (!docIsValid && webIsValid) {
-			setActiveTab('website');
-			return;
-		}
-		if (docIsValid && webIsValid) {
-			setActiveTab('document');
-			return;
-		}
-	}, [docIsValid, webIsValid]);
+	const docIsNoData = docRaw.length > 0 && isNoData(docRaw);
+	const webIsNoData = webRaw.length > 0 && isNoData(webRaw);
+	const docIsValid = docRaw.length > 0 && !docIsNoData;
+	const webIsValid = webRaw.length > 0 && !webIsNoData;
 
-    // Extract references for the active tab
-    const documentReferences = Array.isArray(message.documentReferences) ? message.documentReferences : [];
-    const websiteReferences = Array.isArray(message.websiteReferences) ? message.websiteReferences : [];
-    const srcReferences = activeTab === 'document' ? documentReferences : websiteReferences;
-    const activeReferences = Array.isArray(srcReferences)
-        ? (() => {
-            const seen = new Set();
-            const list = [];
-            for (const r of srcReferences) {
-                const key = String(r?.uri || r?.url || '').trim();
-                if (key && !seen.has(key)) {
-                    seen.add(key);
-                    list.push(r);
-                }
-            }
-            return list;
-        })()
-        : [];
+	// Combine references from both sources
+	const documentReferences = Array.isArray(message.documentReferences) ? message.documentReferences : [];
+	const websiteReferences = Array.isArray(message.websiteReferences) ? message.websiteReferences : [];
+	const allReferences = [...documentReferences, ...websiteReferences];
+	const combinedReferences = Array.isArray(allReferences)
+		? (() => {
+			const seen = new Set();
+			const list = [];
+			for (const r of allReferences) {
+				const key = String(r?.uri || r?.url || '').trim();
+				if (key && !seen.has(key)) {
+					seen.add(key);
+					list.push(r);
+				}
+			}
+			return list;
+		})()
+		: [];
 
-    // Reverted: no citation processing or inline annotations
 
-    return (
-		<div className="bubble tabbed-message" dir={dir}>
-			<div className="tab-header">
-				<button
-					className={`tab-button ${activeTab === 'document' ? 'active' : ''}`}
-					onClick={() => setActiveTab('document')}
-					disabled={!hasDocumentResponse}
-				>
-					Response from Document
-				</button>
-				<button
-					className={`tab-button ${activeTab === 'website' ? 'active' : ''}`}
-					onClick={() => setActiveTab('website')}
-					disabled={!hasWebsiteResponse}
-				>
-					Response from Websites
-				</button>
-			</div>
-			
-			<div className="tab-content" ref={contentRef}>
-                {(() => {
-                    function escapeRegExp(s) {
-                        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    }
-                    function annotateWithSupports(html, supports) {
-                        if (typeof html !== 'string' || !Array.isArray(supports) || supports.length === 0) return html;
-                        const sorted = [...supports]
-                            .map(s => ({ ...s, text: String(s?.text || '').trim(), snippet: String(s?.snippet || s?.text || '').trim() }))
-                            .filter(s => s.text && s.text.length >= 4 && Number.isFinite(s.refNumber))
-                            .sort((a, b) => b.text.length - a.text.length);
-                        let out = html;
-                        for (const s of sorted) {
-                            const num = s.refNumber;
-                            const normalized = escapeRegExp(s.text).replace(/\s+/g, '\\s+');
-                            const pattern = new RegExp(normalized, 'im');
-                            const base = String(s.snippet || s.text || '');
-                            let tooltipHtml = base
-                                .replace(/&/g, '&amp;')
-                                .replace(/</g, '&lt;')
-                                .replace(/>/g, '&gt;')
-                                .replace(/"/g, '&quot;')
-                                .replace(/'/g, '&#39;');
-                            tooltipHtml = tooltipHtml
-                                .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
-                                .replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
-                                .replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
-                                .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>')
-                                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/(^|\s)\*(.+?)\*(?=\s|$)/g, '$1<em>$2</em>')
-                                .replace(/`([^`]+?)`/g, '<code>$1</code>')
-                                .replace(/\r?\n/g, '<br/>' );
-                            // Decide alignment based on approximate position (fallback: left)
-                            const alignClass = 'citation-wrap';
-                            out = out.replace(pattern, (m) => `${m}<span class=\"${alignClass}\"><sup class=\"citation-badge\">${num}</sup><span class=\"citation-tooltip\">${tooltipHtml}</span></span>`);
-                        }
-                        return out;
-                    }
+	// Combine supports from both sources
+	const documentSupports = Array.isArray(message.documentSupports) ? message.documentSupports : [];
+	const websiteSupports = Array.isArray(message.websiteSupports) ? message.websiteSupports : [];
+	const combinedSupports = [...documentSupports, ...websiteSupports];
 
-                    const docSupports = Array.isArray(message.documentSupports) ? message.documentSupports : [];
-                    const webSupports = Array.isArray(message.websiteSupports) ? message.websiteSupports : [];
-                    const docHtmlRaw = normalizeAssistantHtml(docRaw);
-                    const webHtmlRaw = normalizeAssistantHtml(webRaw);
-                    const docHtml = shouldUseIframe(docHtmlRaw) ? docHtmlRaw : annotateWithSupports(docHtmlRaw, docSupports);
-                    const webHtml = shouldUseIframe(webHtmlRaw) ? webHtmlRaw : annotateWithSupports(webHtmlRaw, webSupports);
+	// Create consolidated content
+	let consolidatedContent = '';
+	if (docIsValid && webIsValid) {
+		// Both sources have valid data - combine them
+		consolidatedContent = `${docRaw}\n\n---\n\n${webRaw}`;
+	} else if (docIsValid) {
+		// Only document has valid data
+		consolidatedContent = docRaw;
+	} else if (webIsValid) {
+		// Only website has valid data
+		consolidatedContent = webRaw;
+	} else {
+		// Neither has valid data - show fallback
+		consolidatedContent = message.content || 'No response available';
+	}
 
-                    if (activeTab === 'document') {
-                        return renderHtmlOrIframe(docHtml);
-                    }
-                    return renderHtmlOrIframe(webHtml);
-                })()}
+	return (
+		<div className="bubble" dir={dir} ref={contentRef}>
+			{(() => {
+				function escapeRegExp(s) {
+					return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+				}
+				function annotateWithSupports(html, supports) {
+					if (typeof html !== 'string' || !Array.isArray(supports) || supports.length === 0) return html;
+					const sorted = [...supports]
+						.map(s => ({ ...s, text: String(s?.text || '').trim(), snippet: String(s?.snippet || s?.text || '').trim() }))
+						.filter(s => s.text && s.text.length >= 4 && Number.isFinite(s.refNumber))
+						.sort((a, b) => b.text.length - a.text.length);
+					let out = html;
+					for (const s of sorted) {
+						const num = s.refNumber;
+						const normalized = escapeRegExp(s.text).replace(/\s+/g, '\\s+');
+						const pattern = new RegExp(normalized, 'im');
+						const base = String(s.snippet || s.text || '');
+						let tooltipHtml = base
+							.replace(/&/g, '&amp;')
+							.replace(/</g, '&lt;')
+							.replace(/>/g, '&gt;')
+							.replace(/"/g, '&quot;')
+							.replace(/'/g, '&#39;');
+						tooltipHtml = tooltipHtml
+							.replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+							.replace(/^##\s+(.+)$/gm, '<h2>$1</h2>')
+							.replace(/^#\s+(.+)$/gm, '<h1>$1</h1>')
+							.replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>')
+							.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+							.replace(/(^|\s)\*(.+?)\*(?=\s|$)/g, '$1<em>$2</em>')
+							.replace(/`([^`]+?)`/g, '<code>$1</code>')
+							.replace(/\r?\n/g, '<br/>' );
+						// Decide alignment based on approximate position (fallback: left)
+						const alignClass = 'citation-wrap';
+						out = out.replace(pattern, (m) => `${m}<span class=\"${alignClass}\"><sup class=\"citation-badge\">${num}</sup><span class=\"citation-tooltip\">${tooltipHtml}</span></span>`);
+					}
+					return out;
+				}
 
-                {/* No cited passages list: tooltips only on inline markers */}
+				const htmlRaw = normalizeAssistantHtml(consolidatedContent);
+				const html = shouldUseIframe(htmlRaw) ? htmlRaw : annotateWithSupports(htmlRaw, combinedSupports);
+				return renderHtmlOrIframe(html);
+			})()}
 
-				{/* References list - render only if present */}
-                {Array.isArray(activeReferences) && activeReferences.length > 0 && (
-                    <div className="references">
-                        <div className="references-title"><strong>References</strong></div>
-                        <ul className="references-list">
-                            {activeReferences.map((ref, idx) => {
-                                const uri = ref?.uri || ref?.url;
-                                const title = ref?.title || uri;
-                                if (!uri) return null;
-                                return (
-                                    <li key={`${uri}-${idx}`}>
-                                        <span style={{ marginRight: 6 }}>[{idx + 1}]</span>
-                                        <a href={uri} target="_blank" rel="noopener noreferrer">{title}</a>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                )}
-			</div>
+			{/* References list - render only if present */}
+			{Array.isArray(combinedReferences) && combinedReferences.length > 0 && (
+				<div className="references">
+					<div className="references-title"><strong>References</strong></div>
+					<ul className="references-list">
+						{combinedReferences.map((ref, idx) => {
+							const uri = ref?.uri || ref?.url || ref?.link;
+							const title = ref?.title || ref?.name || ref?.description || uri;
+							if (!uri) return null;
+							return (
+								<li key={`${uri}-${idx}`}>
+									<span style={{ marginRight: 6 }}>[{idx + 1}]</span>
+									<a href={uri} target="_blank" rel="noopener noreferrer">{title}</a>
+								</li>
+							);
+						})}
+					</ul>
+				</div>
+			)}
 		</div>
 	);
 }

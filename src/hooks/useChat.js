@@ -71,11 +71,12 @@ export function useChat(onAfterUpdate, contextPrefix = '', searchMode = 'kb') {
 			const conversationForApi = [...prevMessages, apiUserMsg];
 
 			const mode = (searchModeRef.current || 'kb').toLowerCase();
+			
 			if (mode === 'web') {
+				// Web search mode - only call website API
 				const webReply = await fetchFallbackReply(conversationForApi);
 				const webText = webReply?.text ?? (typeof webReply === 'string' ? webReply : '');
-				const webRefs = Array.isArray(webReply?.references) ? webReply.references : [];
-				const webSupports = Array.isArray(webReply?.supports) ? webReply.supports : [];
+				// Enforce NO references/supports in web mode
 				setMessages(prev => prev.map(m => 
 					m.id === botPlaceholder.id 
 						? { 
@@ -84,18 +85,20 @@ export function useChat(onAfterUpdate, contextPrefix = '', searchMode = 'kb') {
 							documentResponse: '',
 							websiteResponse: webText || '',
 							documentReferences: [],
-							websiteReferences: webRefs,
-							websiteSupports: webSupports,
+							websiteReferences: [],
+							documentSupports: [],
+							websiteSupports: [],
 							pending: false 
 						} 
 						: m
 				));
 			} else {
-				// default to knowledgebase only
+				// Knowledge base mode - only call document API
 				const kbReply = await fetchBotReply(conversationForApi);
 				const kbText = kbReply?.text ?? (typeof kbReply === 'string' ? kbReply : '');
 				const kbRefs = Array.isArray(kbReply?.references) ? kbReply.references : [];
 				const kbSupports = Array.isArray(kbReply?.supports) ? kbReply.supports : [];
+				
 				setMessages(prev => prev.map(m => 
 					m.id === botPlaceholder.id 
 						? { 
@@ -106,6 +109,7 @@ export function useChat(onAfterUpdate, contextPrefix = '', searchMode = 'kb') {
 							documentReferences: kbRefs,
 							websiteReferences: [],
 							documentSupports: kbSupports,
+							websiteSupports: [],
 							pending: false 
 						} 
 						: m
