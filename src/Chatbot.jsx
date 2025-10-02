@@ -55,6 +55,14 @@ export default function Chatbot() {
 		return () => { aborted = true; };
 	}, [lastAssistantText, hasValidContext]);
 
+	useEffect(() => {
+		function onLandingBack() {
+			try { handleNewChat(); } catch {}
+		}
+		window.addEventListener('landing-back', onLandingBack);
+		return () => window.removeEventListener('landing-back', onLandingBack);
+	}, [messages]);
+
 	function handleNewChat() {
 		// Save current conversation before starting new one
 		if (messages.length > 0) {
@@ -64,6 +72,10 @@ export default function Chatbot() {
 		resetChat();
 		newChat();
 		setContextPrefix('');
+		setInput('');
+		setSearchMode('kb');
+		setIsHistoryOpen(false);
+		try { window.dispatchEvent(new CustomEvent('landing-back')); } catch {}
 	}
 
 	function handleSelectConversation(conv) {
